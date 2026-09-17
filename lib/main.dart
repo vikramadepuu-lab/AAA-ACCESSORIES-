@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 void main() {
   runApp(const AAAApp());
@@ -110,7 +111,6 @@ class _HomePageState extends State<HomePage> {
           ),
         ],
       ),
-
       body: Column(
         children: [
           Container(
@@ -139,7 +139,6 @@ class _HomePageState extends State<HomePage> {
               ],
             ),
           ),
-
           Padding(
             padding: const EdgeInsets.all(12),
             child: TextField(
@@ -157,7 +156,6 @@ class _HomePageState extends State<HomePage> {
               },
             ),
           ),
-
           Expanded(
             child: filtered.isEmpty
                 ? const Center(
@@ -181,17 +179,14 @@ class _HomePageState extends State<HomePage> {
                                 height: 65,
                                 decoration: BoxDecoration(
                                   color: Colors.grey.shade200,
-                                  borderRadius:
-                                      BorderRadius.circular(12),
+                                  borderRadius: BorderRadius.circular(12),
                                 ),
                                 child: Icon(
                                   product.icon,
                                   size: 35,
                                 ),
                               ),
-
                               const SizedBox(width: 15),
-
                               Expanded(
                                 child: Column(
                                   crossAxisAlignment:
@@ -215,5 +210,267 @@ class _HomePageState extends State<HomePage> {
                                   ],
                                 ),
                               ),
+                              ElevatedButton(
+                                onPressed: () {
+                                  setState(() {
+                                    cart.add(product);
+                                  });
 
-                             
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text('Added to cart'),
+                                    ),
+                                  );
+                                },
+                                child: const Text('ADD'),
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void openCart() {
+    if (cart.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Your cart is empty'),
+        ),
+      );
+      return;
+    }
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => CartPage(cart: cart),
+      ),
+    );
+  }
+}
+
+class CartPage extends StatelessWidget {
+  final List<Product> cart;
+
+  const CartPage({
+    super.key,
+    required this.cart,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Your Cart'),
+      ),
+      body: Column(
+        children: [
+          Expanded(
+            child: ListView.builder(
+              itemCount: cart.length,
+              itemBuilder: (context, index) {
+                final product = cart[index];
+
+                return ListTile(
+                  leading: Icon(product.icon),
+                  title: Text(product.name),
+                  subtitle: Text(
+                    '₹${product.minPrice} - ₹${product.maxPrice}',
+                  ),
+                );
+              },
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: SizedBox(
+              width: double.infinity,
+              height: 52,
+              child: ElevatedButton(
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => CheckoutPage(cart: cart),
+                    ),
+                  );
+                },
+                child: const Text(
+                  'PROCEED TO CHECKOUT',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class CheckoutPage extends StatefulWidget {
+  final List<Product> cart;
+
+  const CheckoutPage({
+    super.key,
+    required this.cart,
+  });
+
+  @override
+  State<CheckoutPage> createState() => _CheckoutPageState();
+}
+
+class _CheckoutPageState extends State<CheckoutPage> {
+  final nameController = TextEditingController();
+  final mobileController = TextEditingController();
+  final addressController = TextEditingController();
+
+  String payment = 'COD';
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Checkout'),
+      ),
+      body: ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          const Text(
+            'Customer Details',
+            style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 15),
+          TextField(
+            controller: nameController,
+            decoration: const InputDecoration(
+              labelText: 'Full Name',
+              border: OutlineInputBorder(),
+            ),
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: mobileController,
+            keyboardType: TextInputType.phone,
+            decoration: const InputDecoration(
+              labelText: 'Mobile Number',
+              border: OutlineInputBorder(),
+            ),
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: addressController,
+            maxLines: 3,
+            decoration: const InputDecoration(
+              labelText: 'Delivery Address',
+              border: OutlineInputBorder(),
+            ),
+          ),
+          const SizedBox(height: 20),
+          const Text(
+            'Payment Method',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          RadioListTile<String>(
+            title: const Text('Cash on Delivery'),
+            value: 'COD',
+            groupValue: payment,
+            onChanged: (value) {
+              setState(() {
+                payment = value!;
+              });
+            },
+          ),
+          RadioListTile<String>(
+            title: const Text('UPI'),
+            value: 'UPI',
+            groupValue: payment,
+            onChanged: (value) {
+              setState(() {
+                payment = value!;
+              });
+            },
+          ),
+          const SizedBox(height: 20),
+          SizedBox(
+            height: 52,
+            child: ElevatedButton(
+              onPressed: placeOrder,
+              child: const Text(
+                'PLACE ORDER',
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> placeOrder() async {
+    if (nameController.text.trim().isEmpty ||
+        mobileController.text.trim().isEmpty ||
+        addressController.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please fill all customer details'),
+        ),
+      );
+      return;
+    }
+
+    final productNames = widget.cart
+        .map((p) => '• ${p.name}')
+        .join('\n');
+
+    final message =
+        'AAA CAR ACCESSORIES ORDER\n\n'
+        'Customer: ${nameController.text}\n'
+        'Mobile: ${mobileController.text}\n'
+        'Address: ${addressController.text}\n\n'
+        'Products:\n$productNames\n\n'
+        'Payment: $payment';
+
+    final whatsappUrl = Uri.parse(
+      'https://wa.me/919618335282?text=${Uri.encodeComponent(message)}',
+    );
+
+    if (await canLaunchUrl(whatsappUrl)) {
+      await launchUrl(
+        whatsappUrl,
+        mode: LaunchMode.externalApplication,
+      );
+    } else {
+      if (!mounted) return;
+
+      showDialog(
+        context: context,
+        builder: (_) => AlertDialog(
+          title: const Text('Order Ready'),
+          content: SelectableText(message),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('CLOSE'),
+            ),
+          ],
+        ),
+      );
+    }
+  }
+}
